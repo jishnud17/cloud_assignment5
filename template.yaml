@@ -10,9 +10,9 @@ Resources:
   PaaSEC2Instance:
     Type: AWS::EC2::Instance
     Properties:
-      InstanceType: t2.micro
-      KeyName: "" # Requirement 4: Inject the KeyName provided as a parameter
-      ImageId: "" # Requirement 5: Use Ubuntu 24.04 image for us-west-2
+      InstanceType: t3.micro
+      KeyName: !Ref KeyName
+      ImageId: ami-0650f6c65227d92b1  # Ubuntu 24.04 LTS (Noble) amd64 in us-west-2
 
       SecurityGroupIds:
         - !Ref InstanceSecurityGroup
@@ -53,11 +53,13 @@ Resources:
 
           rm -rf $APP_DIR
           mkdir -p $APP_DIR
+          chown ubuntu:ubuntu $APP_DIR
 
           sudo -u ubuntu git --work-tree=$APP_DIR --git-dir=$REPO_DIR checkout -f main
           cd $APP_DIR
 
           # Requirement 6: Build the docker container. Tag it myapp
+          docker build -t myapp $APP_DIR
 
           docker stop myapp-container || true
           docker rm myapp-container || true
@@ -65,6 +67,7 @@ Resources:
           pkill -f "docker logs -f myapp-container" || true
 
           # Requirement 7: Run the Docker container. Map the application port to port 80. Name the container myapp-container
+          docker run -d --name myapp-container -p 80:5000 myapp
 
           mkdir -p /home/ubuntu/logs
           touch $APP_LOG_FILE
@@ -99,6 +102,10 @@ Resources:
           CidrIp: 0.0.0.0/0
 
         # Requirement 8: Add the security group for Port 80 to allow traffic from anywhere.
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
 
 Outputs:
   PublicIP:
